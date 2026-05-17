@@ -1,12 +1,14 @@
 # 🇹🇭 @riiixch/tmweasy-qr-payment 💸
 
 [![npm version](https://img.shields.io/npm/v/%40riiixch%2Ftmweasy-qr-payment.svg)](https://www.npmjs.com/package/@riiixch/tmweasy-qr-payment)
-[![License](https://img.shields.io/npm/l/%40riiixch%2Ftmweasy-qr-payment.svg)](#)
+[![License](https://img.shields.io/badge/License-ISC-green.svg)](LICENSE)
 [![Type Safety](https://img.shields.io/badge/TypeScript-100%25-blue.svg)](https://www.typescriptlang.org)
 [![Zero Dependencies](https://img.shields.io/badge/dependencies-zero-brightgreen.svg)](#)
 [![Developer](https://img.shields.io/badge/Developer-RIIIXCH-orange.svg)](https://github.com/riiixch)
 
 > **สร้างและตรวจสอบระบบรับชำระเงิน PromptPay QR Code ผ่าน TMWeasy API ด้วย SDK แยกสองระบบสมบูรณ์ 100% สำหรับ Webhook (Event-Driven) และ Direct Bank (accode Check) ที่มีความปลอดภัยสูงในระดับ Enterprise-grade สำหรับ TypeScript & Node.js**
+> 
+> 🔗 **สมัครใช้งานและจัดการบัญชีของท่านได้ที่:** [TMWeasy API Official Website](https://www.tmweasyapi.com/index.php)
 
 ---
 

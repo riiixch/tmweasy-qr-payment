@@ -38,10 +38,107 @@
 
 ---
 
+## 📊 ขั้นตอนการทำงานของระบบ (System Architecture & Flows)
+
+เพื่อความเข้าใจในขั้นตอนการแลกเปลี่ยนข้อมูลของทั้งสองระบบ สามารถดูแผนภาพลำดับการทำงาน (Sequence Diagram) ด้านล่างนี้:
+
+### 🔄 1. Webhook Flow (Event-Driven)
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Customer as ลูกค้า
+    participant App as ระบบหลังบ้านของคุณ (Express Server)
+    participant SDK as SDK (TMWeasy SDK)
+    participant API as TMWeasy API Server
+
+    Customer->>App: 1. เลือกชำระเงินพร้อมเพย์ (Checkout)
+    App->>SDK: เรียกใช้ client.createPay(...)
+    SDK->>API: POST /api_pph.php (ส่งคำขอสร้างบิล)
+    API-->>SDK: ส่งกลับ id_pay (รหัสธุรกรรม)
+    SDK-->>App: คืนค่า CreatePayResponse
+    App->>SDK: เรียกใช้ client.detailPay(...)
+    SDK->>API: POST /api_pph.php (ขอภาพ QR Code และเวลาหมดอายุ)
+    API-->>SDK: ส่งกลับ Base64 Image และ promptpay_payload
+    SDK-->>App: คืนค่า DetailPayResponse (แปลงหน่วยสตางค์เป็นบาทให้สำเร็จ)
+    App-->>Customer: 2. แสดงรูป QR Code และเวลาที่เหลือในการโอนเงิน
+    Note over Customer, API: ลูกค้าสแกนชำระเงินสำเร็จผ่าน Mobile Banking App
+    API->>App: 3. ส่งสัญญาณยืนยันการรับเงิน (POST Webhook callback)
+    App->>SDK: เรียกใช้ TMWeasyWebhook.verifyAndParse(...)
+    Note over SDK: ตรวจสอบ MD5 Signature ป้องกันการปลอมแปลง <br/>และจัดการเรียงลำดับ JSON key เผื่อExpressเปลี่ยนลำดับ
+    SDK-->>App: คืนค่าข้อมูลธุรกรรมยืนยันความถูกต้อง (ParsedWebhookData)
+    App-->>Customer: 4. แสดงผลการชำระเงินสำเร็จและเปิดสิทธิ์การใช้งาน
+    App-->>API: ตอบกลับ JSON { "status": 1 } เพื่อปิดบิลฝั่ง TMWeasy
+```
+
+### ⚡ 2. Direct Bank Flow (Direct Check with accode)
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Customer as ลูกค้า
+    participant App as ระบบหลังบ้านของคุณ (Express Server)
+    participant SDK as SDK (TMWeasy SDK)
+    participant API as TMWeasy API Server
+
+    Customer->>App: 1. เลือกชำระเงินพร้อมเพย์ (Checkout)
+    App->>SDK: เรียกใช้ directPayment.createPay(...)
+    SDK->>API: POST /apipp.php (สร้าง session ธุรกรรม)
+    API-->>SDK: ส่งกลับ id_pay
+    SDK-->>App: คืนค่า CreatePayResponse
+    App->>SDK: เรียกใช้ directPayment.detailPay(...)
+    SDK->>API: POST /apipp.php (ขอภาพ QR Code)
+    API-->>SDK: ส่งกลับ Base64 Image
+    SDK-->>App: คืนค่า DetailPayResponse
+    App-->>Customer: 2. แสดงภาพ QR Code บนหน้าจอ
+    Note over Customer: ลูกค้าสแกนจ่ายเงินสำเร็จผ่าน Mobile Banking
+    Customer->>App: 3. กดยืนยันชำระเงิน (หรือรัน Background Polling)
+    App->>SDK: เรียกใช้ directPayment.confirmPay(...)
+    SDK->>API: POST /apipp.php (ตรวจสอบเงินเข้าบัญชีจริงตรงกับธนาคารผ่าน accode/accountNo)
+    API-->>SDK: คืนผลลัพธ์จากธนาคาร
+    SDK-->>App: คืนค่า ConfirmPayResponse
+    App-->>Customer: 4. แสดงผลสำเร็จและส่งมอบสินค้า
+```
+
+---
+
 ## 📦 การติดตั้ง (Installation)
 
 ```bash
 npm install @riiixch/tmweasy-qr-payment
+```
+
+### 🔒 ⚙️ การตั้งค่าสภาพแวดล้อมและความปลอดภัย (Environment & Security Setup)
+
+เพื่อความปลอดภัยระดับสูงสุดในสภาวะการใช้งานจริง (Production) **ห้ามเขียนข้อมูลเชื่อมต่อที่เป็นความลับ (Credentials) ลงในโค้ดโดยตรงเด็ดขาด** แนะนำให้ใช้ตัวแปรสภาพแวดล้อมผ่านไฟล์ `.env` เสมอ:
+
+1. ติดตั้งแพ็กเกจช่วยโหลดค่าตัวแปรสภาพแวดล้อม:
+```bash
+npm install dotenv
+```
+
+2. สร้างไฟล์ `.env` ไว้ที่โฟลเดอร์หลักของโปรเจกต์:
+```env
+TMWEASY_USERNAME=your_username
+TMWEASY_PASSWORD=your_password
+TMWEASY_CON_ID=your_con_id
+TMWEASY_API_KEY=your_api_key
+
+# สำหรับระบบ Direct Bank Flow เท่านั้น
+TMWEASY_ACCODE=your_accode_from_settings
+TMWEASY_ACCOUNT_NO=0123456789
+```
+
+3. เรียกใช้ในโค้ดของคุณ:
+```typescript
+import dotenv from 'dotenv';
+import { TMWeasyQRPaymentWebhook } from '@riiixch/tmweasy-qr-payment';
+
+dotenv.config();
+
+const client = new TMWeasyQRPaymentWebhook({
+  username: process.env.TMWEASY_USERNAME!,
+  password: process.env.TMWEASY_PASSWORD!,
+  conId: process.env.TMWEASY_CON_ID!
+});
 ```
 
 ---
@@ -281,9 +378,99 @@ try {
 
 ---
 
+## 📘 ข้อมูลอ้างอิง API และประเภทข้อมูล (API & Type References)
+
+### ⚙️ 1. รายละเอียดการตั้งค่าคอนฟิก (Configuration References)
+
+#### 🔄 Webhook Client (`TMWeasyQRPaymentWebhook`)
+```typescript
+const client = new TMWeasyQRPaymentWebhook(config: TMWeasyQRPaymentWebhookConfig);
+```
+| Property | Type | Required | Description | Default |
+|---|---|:---:|---|---|
+| `username` | `string` | **Yes** | ชื่อผู้ใช้งานระบบ TMWeasy | - |
+| `password` | `string` | **Yes** | รหัสผ่านระบบ TMWeasy | - |
+| `conId` | `string` | **Yes** | รหัสเชื่อมต่อ (Connection ID) ที่ได้จากหน้าตั้งค่าของ TMWeasy | - |
+| `baseUrl` | `string` | No | ลิงก์เชื่อมต่อ API Webhook | `'http://tmwallet.thaighost.net/api_pph.php'` |
+| `retryOptions`| `RetryOptions` | No | การตั้งค่าลองใหม่อัตโนมัติเมื่อเกิดการล้มเหลวของเครือข่าย | - |
+
+#### ⚡ Direct Bank Client (`TMWeasyQRPayment`)
+```typescript
+const direct = new TMWeasyQRPayment(config: TMWeasyQRPaymentConfig);
+```
+| Property | Type | Required | Description | Default |
+|---|---|:---:|---|---|
+| `username` | `string` | **Yes** | ชื่อผู้ใช้งานระบบ TMWeasy | - |
+| `password` | `string` | **Yes** | รหัสผ่านระบบ TMWeasy | - |
+| `conId` | `string` | **Yes** | รหัสเชื่อมต่อ (Connection ID) ที่ได้จากหน้าตั้งค่าของ TMWeasy | - |
+| `accode` | `string` | No | คีย์เข้ารหัสบัญชีธนาคาร (ดักข้ามตรวจสอบยอด) | - |
+| `accountNo` | `string` | No | เลขบัญชีธนาคาร 10 หลักรับเงิน | - |
+| `baseUrl` | `string` | No | ลิงก์เชื่อมต่อ API ตรวจสอบยอดตรง | `'https://tmwallet.thaighost.net/apipp.php'` |
+| `retryOptions`| `RetryOptions` | No | การตั้งค่าลองใหม่อัตโนมัติเมื่อเกิดการล้มเหลวของเครือข่าย | - |
+
+---
+
+### 📦 2. โครงสร้างประเภทข้อมูล (Data Interfaces Reference)
+
+#### 🏷️ `RetryOptions`
+ตัวเลือกสำหรับการส่งใหม่อัตโนมัติแบบทวีคูณ (Exponential Backoff):
+* `retries` (`number`): จำนวนการยิงทดลองซ้ำสูงสุดเมื่อเน็ตขาดหาย (ค่าเริ่มต้นคือ `0` หรือไม่มีการยิงซ้ำ)
+* `minTimeout` (`number`): เวลารอบแรกที่รอก่อนทดลองซ้ำในหน่วยมิลลิวินาที (ค่าเริ่มต้นคือ `1000` หรือ 1 วินาที)
+* `factor` (`number`): อัตราคูณทวีคูณความเร็วของเวลาในการรอยิงรอบถัดไป (ค่าเริ่มต้นคือ `2`)
+
+#### 🏷️ `CreatePayOptions` & `CreatePayResponse`
+* **ตัวเลือกข้อมูลส่งเข้า (`createPay(options)`)**:
+  * `amount` (`number`): ยอดเงินที่ต้องการสร้างบิลในหน่วยบาท **ต้องเป็นเลขจำนวนเต็มเท่านั้น** (เช่น `50`)
+  * `ref1` (`string`): รหัสอ้างอิงลูกค้า (เช่น Username, UID, อีเมล หรือรหัสการสั่งซื้อ)
+  * `ip` (`string`): หมายเลข IP Address ของลูกค้าที่ทำรายการ
+* **ข้อมูลที่ตอบกลับ (Response)**:
+  * `status` (`0 | 1`): สถานะการขอเปิดบิล (`1` = สำเร็จ, `0` = ล้มเหลว)
+  * `id_pay` (`string`?): ไอดีอ้างอิงธุรกรรมจาก TMWeasy (จะได้รับเฉพาะเมื่อ `status: 1`)
+  * `msg` (`string`?): ข้อความแสดงความล้มเหลวจาก API (มีเมื่อ `status: 0`)
+
+#### 🏷️ `DetailPayOptions` & `DetailPayResponse`
+* **ตัวเลือกข้อมูลส่งเข้า (`detailPay(options)`)**:
+  * `idPay` (`string | number`): ไอดีอ้างอิงธุรกรรมที่ได้จากขั้นตอนการสร้างบิล (`id_pay`)
+  * `promptpayId` (`string`): เบอร์พร้อมเพย์รับเงินของคุณ (เบอร์โทรศัพท์, เลขบัตรประชาชน หรือ E-Wallet ID)
+  * `type` (`'01' | '02' | '03'`): ประเภท ID รับเงิน (`'01'` = เบอร์โทรศัพท์, `'02'` = บัตรประชาชน, `'03'` = E-Wallet ID)
+* **ข้อมูลที่ตอบกลับ (Response)**:
+  * `status` (`0 | 1`): สถานะรายการ
+  * `ref1` (`string`?): รหัสอ้างอิงที่คุณตั้งไว้ในบิล
+  * `amount_check` (`string`?): ยอดเงินที่ต้องชำระในหน่วยสตางค์ (เช่น `"5000"`)
+  * `amount_baht` (`number`?): **ยอดเงินในหน่วยบาท** ที่ SDK คำนวณเป็นเลขทศนิยม float ให้เสร็จสรรพ (เช่น `50.00`)
+  * `qr_image_base64` (`string`?): ภาพ QR Code สไตล์พร้อมเพย์แบบ Base64 (สามารถใช้กับ `<img src="data:image/png;base64,..."/>`)
+  * `promptpay_payload` (`string`?): ชุดโค้ด EMVCo Payload สำหรับ PromptPay เพื่อนำไปวาดหน้าจอหรือสร้าง QR บนแอปพลิเคชันส่วนตัว
+  * `time_out` (`number`?): วินาทีคงเหลือก่อนที่บิลพร้อมเพย์ตัวนี้จะหมดอายุลง
+
+#### ⚡ 🏷️ `ConfirmPayOptions` & `ConfirmPayResponse` (สำหรับ Direct Bank เท่านั้น)
+* **ตัวเลือกข้อมูลส่งเข้า (`confirmPay(options)`)**:
+  * `idPay` (`string | number`): รหัสธุรกรรม `id_pay`
+  * `ip` (`string`): IP ของเครื่องปลายทางขณะกดยืนยันตรวจบิล
+  * `accountNo` (`string`?): เลขบัญชีธนาคาร 10 หลัก (หากไม่มีการตั้งค่าไว้ส่วนกลาง)
+  * `accode` (`string`?): รหัสคีย์เข้ารหัสธนาคาร (หากไม่มีการตั้งค่าไว้ส่วนกลาง)
+* **ข้อมูลที่ตอบกลับ (Response)**:
+  * `status` (`0 | 1`): สถานะยืนยันยอดเงินจากธนาคาร (`1` = ลูกค้าโอนเงินเรียบร้อยแล้ว, `0` = ยอดเงินยังไม่เข้าบัญชีหรือหมดเวลา)
+  * `ref1` (`string`?): รหัสอ้างอิงลูกค้า
+  * `amount` (`number`?): **ยอดเงินจำนวนบาทที่ลูกค้าโอนเข้ามาจริง**
+  * `date_pay` (`string`?): วันที่และเวลาที่โอนเงินสำเร็จในรูปแบบ `"YYYY-MM-DD HH:mm"`
+  * `msg` (`string`?): รายละเอียดเพิ่มเติมกรณีเกิดความล่าช้า/หมดสิทธิ์
+
+#### 🔄 🏷️ `ParsedWebhookData` (สำหรับ Webhook เท่านั้น)
+โครงสร้างข้อมูลที่ได้รับการตรวจสอบ Signature และแกะกล่องออกมาเรียบร้อยแล้วหลังผ่านการถอดรหัส Webhook:
+* `id_pay` (`string`): หมายเลขบิลธุรกรรมของระบบ
+* `ref1` (`string`): รหัสอ้างอิงลูกค้า
+* `amount_check` (`string`): ยอดชำระในหน่วยสตางค์ (เช่น `"1901"` สำหรับ 19.01 บาท)
+* `amount` (`string`): ยอดชำระในหน่วยบาทแบบข้อความตัวอักษร
+* `amount_baht` (`number`): **ยอดชำระจริงในหน่วยบาทที่แปลงเป็น Number ให้พร้อมใช้งาน**
+* `date_pay` (`string`): วันและเวลาที่ลูกค้าชำระเงินผ่านแอปฯ ธนาคาร (`"YYYY-MM-DD HH:mm"`)
+
+---
+
 ## 👥 ผู้พัฒนา (Developer Credit)
 
-*   **RIIIXCH** — [GitHub Profile](https://github.com/riiixch)
+*   **RIIIXCH** (Developer & Creator)
+    *   **GitHub Profile:** [@riiixch](https://github.com/riiixch)
+    *   **GitHub Repository:** [tmweasy-qr-payment](https://github.com/riiixch/tmweasy-qr-payment)
 
 ---
 

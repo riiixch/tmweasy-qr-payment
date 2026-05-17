@@ -29,7 +29,15 @@
     "thai-payment",
     "payment-gateway"
   ],
-  "author": "RIIIXCH (https://github.com/riiixch)",
+  "author": "RIIIXCH",
+  "homepage": "https://github.com/riiixch/tmweasy-qr-payment#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/riiixch/tmweasy-qr-payment.git"
+  },
+  "bugs": {
+    "url": "https://github.com/riiixch/tmweasy-qr-payment/issues"
+  },
   "license": "ISC",
   "devDependencies": {
     "@types/node": "^25.8.0",

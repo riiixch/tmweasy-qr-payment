@@ -23,10 +23,10 @@ export async function renderQRToConsole(payload: string): Promise<void> {
     ): Promise<string>;
   }
 
-  let qrcode: QRCodeModule;
+  let qrcodeImport: unknown;
   try {
     // Dynamic import to keep the core package free of external dependencies
-    qrcode = (await import('qrcode')) as unknown as QRCodeModule;
+    qrcodeImport = await import('qrcode');
   } catch (err) {
     console.error('\n❌ ไม่พบแพ็กเกจ "qrcode" สำหรับวาดรูป QR Code ใน Terminal');
     console.error('กรุณาติดตั้งแพ็กเกจเสริมตัวนี้ในโครงการของคุณโดยรันคำสั่ง:\n');
@@ -35,8 +35,19 @@ export async function renderQRToConsole(payload: string): Promise<void> {
   }
 
   try {
+    // CJS / ESM Interop: ดึงฟังก์ชัน toString อย่างปลอดภัยโดยปราศจาก 'any' (Strict TypeScript)
+    const qrcodeModule = qrcodeImport as {
+      toString?: QRCodeModule['toString'];
+      default?: { toString?: QRCodeModule['toString'] };
+    };
+
+    const qrToString = qrcodeModule.toString || qrcodeModule.default?.toString;
+    if (typeof qrToString !== 'function') {
+      throw new Error('toString method is not available on qrcode package');
+    }
+
     // Render as a compact ANSI terminal string (small: true is highly scan-friendly)
-    const qrText = await qrcode.toString(payload, { type: 'terminal', small: true });
+    const qrText = await qrToString(payload, { type: 'terminal', small: true });
     console.log(qrText);
   } catch (renderError) {
     throw new Error(`Failed to render QR Code to console: ${(renderError as Error).message}`);

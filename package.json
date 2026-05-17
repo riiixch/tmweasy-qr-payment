@@ -39,6 +39,14 @@
     "url": "https://github.com/riiixch/tmweasy-qr-payment/issues"
   },
   "license": "ISC",
+  "peerDependencies": {
+    "qrcode": "^1.5.4"
+  },
+  "peerDependenciesMeta": {
+    "qrcode": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@types/node": "^25.8.0",
     "@types/qrcode": "^1.5.6",

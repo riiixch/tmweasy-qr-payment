@@ -1,0 +1,39 @@
+# Source files & Tests
+src/
+tests/
+__tests__/
+*.test.ts
+*.spec.ts
+
+# Configuration files
+tsconfig.json
+tsup.config.ts
+vitest.config.ts
+.gitignore
+.npmignore
+.gitattributes
+
+# Environment and secrets
+.env
+.env.*
+*.local
+*.lock
+pnpm-lock.yaml
+yarn.lock
+package-lock.json
+
+# Development & IDEs
+.github/
+.vscode/
+.idea/
+.scratch/
+logs/
+*.log
+
+# Temporary and build caches
+.tmp/
+tmp/
+node_modules/
+coverage/
+.nyc_output/
+.vitest/

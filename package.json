@@ -1,5 +1,5 @@
 {
-  "name": "tmweasy-qr-payment",
+  "name": "@riiixch/tmweasy-qr-payment",
   "version": "1.0.0",
   "description": "TypeScript SDK for TMWeasy PromptPay QR Webhook payment API",
   "main": "./dist/index.js",

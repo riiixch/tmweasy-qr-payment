@@ -1,16 +1,20 @@
-import { TMWeasyQRPaymentWebhookConfig, CreatePayOptions, CreatePayResponse, DetailPayOptions, DetailPayResponse, CancelPayResponse, AutoCancelOptions, AutoCancelHandle } from './types';
+import { TMWeasyQRPaymentConfig, CreatePayOptions, CreatePayResponse, DetailPayOptions, DetailPayResponse, CancelPayResponse, ConfirmPayOptions, ConfirmPayResponse, AutoCancelOptions, AutoCancelHandle } from './types';
 import { TMWeasyValidationError, TMWeasyAPIError } from './errors';
 
 /**
- * Client class to interact with TMWeasy PromptPay Webhook API
+ * Client class to interact directly with TMWeasy Bank Confirmation API (apipp.php)
  */
-export class TMWeasyQRPaymentWebhook {
+export class TMWeasyQRPayment {
   private static readonly PHONE_REGEX = /^[0-9]{10}$/;
   private static readonly ID_REGEX = /^[0-9]{13}$/;
+  private static readonly EWALLET_REGEX = /^[0-9]{10,20}$/;
+  private static readonly ACCOUNT_NO_REGEX = /^[0-9]{10}$/;
 
   private readonly username: string;
   private readonly password: string;
   private readonly conId: string;
+  private readonly accode?: string;
+  private readonly accountNo?: string;
   private readonly baseUrl: string;
   private readonly retryOptions: {
     retries: number;
@@ -19,10 +23,10 @@ export class TMWeasyQRPaymentWebhook {
   };
 
   /**
-   * Initialize a new TMWeasyQRPaymentWebhook
-   * @param config Configuration options
+   * Initialize a new TMWeasyQRPayment Direct client
+   * @param config Direct configuration options
    */
-  constructor(config: TMWeasyQRPaymentWebhookConfig) {
+  constructor(config: TMWeasyQRPaymentConfig) {
     if (!config.username || typeof config.username !== 'string' || config.username.trim() === '') {
       throw new TMWeasyValidationError('Username is required and must be a non-empty string', 'username');
     }
@@ -36,7 +40,9 @@ export class TMWeasyQRPaymentWebhook {
     this.username = config.username.trim();
     this.password = config.password.trim();
     this.conId = config.conId.trim();
-    this.baseUrl = config.baseUrl || 'http://tmwallet.thaighost.net/api_pph.php';
+    this.accode = config.accode?.trim();
+    this.accountNo = config.accountNo?.trim();
+    this.baseUrl = config.baseUrl || 'https://tmwallet.thaighost.net/apipp.php';
     this.retryOptions = {
       retries: config.retryOptions?.retries ?? 0,
       minTimeout: config.retryOptions?.minTimeout ?? 1000,
@@ -70,7 +76,7 @@ export class TMWeasyQRPaymentWebhook {
           method: 'GET',
           headers: {
             'Accept': 'application/json',
-            'User-Agent': 'TMWeasy-QR-Payment-Webhook-SDK/1.0.0'
+            'User-Agent': 'TMWeasy-QR-Payment-Direct-SDK/1.0.0'
           }
         });
 
@@ -135,16 +141,16 @@ export class TMWeasyQRPaymentWebhook {
 
   /**
    * Generate a standard EMVCo PromptPay QR Code payload string
-   * @param promptpayId PromptPay ID (Phone number or National ID)
-   * @param type PromptPay type ('01' = phone, '02' = National ID)
+   * @param promptpayId PromptPay ID (Phone number, National ID or E-Wallet ID)
+   * @param type PromptPay type ('01' = phone, '02' = National ID, '03' = E-Wallet)
    * @param amountSatang The transaction amount in Satangs
-   * @returns EMVCo string payload (e.g. 000201010212...)
+   * @returns EMVCo string payload
    */
-  public static generatePromptPayPayload(promptpayId: string, type: '01' | '02', amountSatang: number): string {
+  public static generatePromptPayPayload(promptpayId: string, type: '01' | '02' | '03', amountSatang: number): string {
     if (!promptpayId || typeof promptpayId !== 'string') {
       throw new TMWeasyValidationError('PromptPay ID is required and must be a string', 'promptpayId');
     }
-    if (type !== '01' && type !== '02') {
+    if (type !== '01' && type !== '02' && type !== '03') {
       throw new TMWeasyValidationError('Invalid PromptPay type', 'type');
     }
     if (typeof amountSatang !== 'number' || isNaN(amountSatang) || amountSatang < 0) {
@@ -153,20 +159,27 @@ export class TMWeasyQRPaymentWebhook {
     const cleanId = promptpayId.trim();
     
     let formattedId = '';
+    let aidTag = '';
+
     if (type === '01') {
+      aidTag = '0016A000000677010111';
       // Phone format: remove leading 0, prepend 66, pad to 13 digits with leading 00
       let phoneNo = cleanId;
       if (phoneNo.startsWith('0')) {
         phoneNo = '66' + phoneNo.slice(1);
       }
       formattedId = '00' + phoneNo;
+    } else if (type === '02') {
+      aidTag = '0016A000000677010111';
+      formattedId = cleanId;
     } else {
-      // National ID
+      // E-Wallet (type 03) uses standard 112 AID
+      aidTag = '0016A000000677010112';
       formattedId = cleanId;
     }
 
-    const aidTag = '0016A000000677010111';
-    const idTag = `${type}13${formattedId}`;
+    const lenStr = formattedId.length.toString().padStart(2, '0');
+    const idTag = `${type}${lenStr}${formattedId}`;
     const merchantInfoValue = aidTag + idTag;
     const merchantInfoTag = `29${merchantInfoValue.length.toString().padStart(2, '0')}${merchantInfoValue}`;
 
@@ -201,11 +214,6 @@ export class TMWeasyQRPaymentWebhook {
       throw new TMWeasyValidationError('ref1 (Customer Reference ID) is required and must be a non-empty string', 'ref1');
     }
 
-    // 3. IP validation: Must be a non-empty string
-    if (!options.ip || typeof options.ip !== 'string' || options.ip.trim() === '') {
-      throw new TMWeasyValidationError('Customer IP address is required and must be a non-empty string', 'ip');
-    }
-
     interface RawCreatePayResponse {
       status: number | string;
       id_pay?: string | number;
@@ -215,7 +223,6 @@ export class TMWeasyQRPaymentWebhook {
     const rawResponse = await this.request<RawCreatePayResponse>({
       amount: String(options.amount),
       ref1: options.ref1.trim(),
-      ip: options.ip.trim(),
       method: 'create_pay'
     });
 
@@ -246,8 +253,8 @@ export class TMWeasyQRPaymentWebhook {
     }
 
     // 2. PromptPay Type validation
-    if (options.type !== '01' && options.type !== '02') {
-      throw new TMWeasyValidationError('PromptPay type must be "01" (phone number) or "02" (National ID Card)', 'type');
+    if (options.type !== '01' && options.type !== '02' && options.type !== '03') {
+      throw new TMWeasyValidationError('PromptPay type must be "01" (phone), "02" (National ID) or "03" (E-Wallet ID)', 'type');
     }
 
     // 3. PromptPay ID validation
@@ -259,13 +266,18 @@ export class TMWeasyQRPaymentWebhook {
 
     if (options.type === '01') {
       // Must be numeric and exactly 10 digits
-      if (!TMWeasyQRPaymentWebhook.PHONE_REGEX.test(cleanPromptPayId)) {
+      if (!TMWeasyQRPayment.PHONE_REGEX.test(cleanPromptPayId)) {
         throw new TMWeasyValidationError('PromptPay Mobile number must be a numeric string of exactly 10 digits', 'promptpayId');
       }
-    } else {
+    } else if (options.type === '02') {
       // Must be numeric and exactly 13 digits
-      if (!TMWeasyQRPaymentWebhook.ID_REGEX.test(cleanPromptPayId)) {
+      if (!TMWeasyQRPayment.ID_REGEX.test(cleanPromptPayId)) {
         throw new TMWeasyValidationError('PromptPay National ID must be a numeric string of exactly 13 digits', 'promptpayId');
+      }
+    } else {
+      // E-Wallet (type 03) must be numeric and 10 to 20 digits
+      if (!TMWeasyQRPayment.EWALLET_REGEX.test(cleanPromptPayId)) {
+        throw new TMWeasyValidationError('PromptPay E-Wallet ID must be a numeric string between 10 and 20 digits', 'promptpayId');
       }
     }
 
@@ -315,7 +327,7 @@ export class TMWeasyQRPaymentWebhook {
       // Generate the standard EMVCo PromptPay payload if we have the amount
       if (amountSatangVal > 0) {
         try {
-          response.promptpay_payload = TMWeasyQRPaymentWebhook.generatePromptPayPayload(
+          response.promptpay_payload = TMWeasyQRPayment.generatePromptPayPayload(
             cleanPromptPayId,
             options.type,
             amountSatangVal
@@ -332,8 +344,72 @@ export class TMWeasyQRPaymentWebhook {
   }
 
   /**
+   * Step 3: Confirm payment session directly via bank API (using accode)
+   * @param options Confirm options containing idPay, ip, bank account no, and accode
+   * @returns Bank confirmation details
+   */
+  public async confirmPay(options: ConfirmPayOptions): Promise<ConfirmPayResponse> {
+    if (options.idPay === undefined || options.idPay === null || String(options.idPay).trim() === '') {
+      throw new TMWeasyValidationError('idPay is required to confirm payment', 'idPay');
+    }
+
+    if (!options.ip || typeof options.ip !== 'string' || options.ip.trim() === '') {
+      throw new TMWeasyValidationError('Customer IP address is required to confirm payment', 'ip');
+    }
+
+    const conAccode = options.accode?.trim() || this.accode;
+    if (!conAccode) {
+      throw new TMWeasyValidationError('accode (bank access code) is required to confirm payment, either globally or in options', 'accode');
+    }
+
+    const conAccountNo = options.accountNo?.trim() || this.accountNo;
+    if (!conAccountNo) {
+      throw new TMWeasyValidationError('accountNo (merchant bank account number) is required to confirm payment, either globally or in options', 'accountNo');
+    }
+
+    // Validate account number: must be exactly 10 digits
+    if (!TMWeasyQRPayment.ACCOUNT_NO_REGEX.test(conAccountNo)) {
+      throw new TMWeasyValidationError('accountNo must be a numeric string of exactly 10 digits', 'accountNo');
+    }
+
+    interface RawConfirmPayResponse {
+      status: number | string;
+      ref1?: string;
+      amount?: string | number;
+      msg?: string;
+      date_pay?: string;
+    }
+
+    const rawResponse = await this.request<RawConfirmPayResponse>({
+      id_pay: String(options.idPay).trim(),
+      accode: conAccode,
+      account_no: conAccountNo,
+      ip: options.ip.trim(),
+      method: 'confirm'
+    });
+
+    const statusValue = Number(rawResponse.status) === 1 ? 1 : 0;
+
+    const response: ConfirmPayResponse = {
+      status: statusValue
+    };
+
+    if (statusValue === 1) {
+      response.ref1 = rawResponse.ref1;
+      if (rawResponse.amount !== undefined) {
+        response.amount = Number(rawResponse.amount);
+      }
+      response.date_pay = rawResponse.date_pay;
+    } else {
+      response.msg = rawResponse.msg || 'Unknown Direct Confirmation Error';
+    }
+
+    return response;
+  }
+
+  /**
    * Cancel a payment ID
-   * Note: The payment ID can only be cancelled after the remaining payment duration (time_out) has expired (becomes negative).
+   * Note: The payment ID can only be cancelled after the remaining payment duration (time_out) has expired.
    * @param idPay The payment ID to cancel
    */
   public async cancelPay(idPay: string | number): Promise<CancelPayResponse> {
@@ -364,7 +440,7 @@ export class TMWeasyQRPaymentWebhook {
    * 
    * > [!IMPORTANT]
    * > Make sure to save the returned `AutoCancelHandle` and call `.stop()` as soon as
-   * > the payment is confirmed successful (via webhook or polling) to prevent cancelling a paid invoice!
+   * > the payment is confirmed successful to prevent cancelling a paid invoice!
    * 
    * @param idPay The payment ID to cancel when timeout expires
    * @param delaySeconds The remaining timeout duration in seconds (usually returned by detailPay)

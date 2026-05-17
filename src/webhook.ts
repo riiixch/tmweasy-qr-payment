@@ -79,7 +79,11 @@ export class TMWeasyWebhook {
     } else if (typeof data === 'object' && data !== null) {
       // Handle cases where middleware has already parsed the data field into an object
       parsedData = data as WebhookData;
-      rawDataString = JSON.stringify(data);
+      try {
+        rawDataString = JSON.stringify(data);
+      } catch {
+        throw new TMWeasyValidationError('Failed to serialize webhook data object', 'data');
+      }
     } else {
       throw new TMWeasyValidationError('Webhook "data" parameter must be a JSON string or a parsed object', 'data');
     }

@@ -1,313 +1,292 @@
-# tmweasy-qr-payment-webhook
+# 🇹🇭 @riiixch/tmweasy-qr-payment 💸
 
-[![npm version](https://img.shields.io/npm/v/tmweasy-qr-payment-webhook.svg)](https://www.npmjs.com/package/tmweasy-qr-payment-webhook)
-[![License](https://img.shields.io/npm/l/tmweasy-qr-payment-webhook.svg)](https://github.com/yourusername/tmweasy-qr-payment-webhook)
+[![npm version](https://img.shields.io/npm/v/%40riiixch%2Ftmweasy-qr-payment.svg)](https://www.npmjs.com/package/@riiixch/tmweasy-qr-payment)
+[![License](https://img.shields.io/npm/l/%40riiixch%2Ftmweasy-qr-payment.svg)](#)
 [![Type Safety](https://img.shields.io/badge/TypeScript-100%25-blue.svg)](https://www.typescriptlang.org)
 [![Zero Dependencies](https://img.shields.io/badge/dependencies-zero-brightgreen.svg)](#)
+[![Developer](https://img.shields.io/badge/Developer-RIIIXCH-orange.svg)](https://github.com/riiixch)
 
-TypeScript SDK สำหรับเชื่อมต่อกับ **TMWeasy PromptPay QR Webhook Payment API** เพื่อความสะดวก ปลอดภัย และมีความถูกต้องของข้อมูล 100% 
+> **สร้างและตรวจสอบระบบรับชำระเงิน PromptPay QR Code ผ่าน TMWeasy API ด้วย SDK แยกสองระบบสมบูรณ์ 100% สำหรับ Webhook (Event-Driven) และ Direct Bank (accode Check) ที่มีความปลอดภัยสูงในระดับ Enterprise-grade สำหรับ TypeScript & Node.js**
 
 ---
 
-## 🌟 จุดเด่น (Key Features)
+## 💡 แก้ไขปัญหาอะไร? (What Problem Does This Solve?)
 
-* **100% TypeScript & Strict Type Safety**: พัฒนาด้วย TypeScript ทั้งระบบ **ไม่มีการใช้ `any` เลยแม้แต่จุดเดียว** ทุกฟิลด์มีคำอธิบายครบถ้วนผ่าน TSDoc autocomplete แสดงผลได้ดีบน VS Code
-* **Zero Dependencies**: ออกแบบโดยใช้ `fetch` API และโมดูล `crypto` ดั้งเดิมของ Node.js (ไม่มี package เสริมภายนอก ทำให้โปรเจกต์ของคุณเบา ปลอดภัย และไม่มีปัญหาช่องโหว่ความปลอดภัย)
-* **Hybrid Package Support**: รองรับทั้ง **ES Modules (`import`)** และ **CommonJS (`require`)**
-* **Strict Validation**: มีระบบตรวจสอบข้อมูลนำเข้าฝั่ง Client ทันทีเพื่อความรวดเร็วและปลอดภัย:
-  * ยอดชำระ (`amount`) ต้องเป็นจำนวนเต็มบวกเท่านั้น (ไม่มีทศนิยม)
-  * เบอร์โทรศัพท์ PromptPay (ความยาว 10-15 หลัก) และเลขบัตรประชาชน PromptPay (ความยาว 13 หลัก)
-* **Smart Webhook Verification**: 
-  * ตรวจสอบความถูกต้องของ MD5 Signature ของ Webhook ได้อย่างปลอดภัย
-  * **Fallback Key Sorting**: รองรับการตรวจสอบผ่าน JSON Object (ในกรณีที่เฟรมเวิร์กอย่าง Express แปลงเป็น Object เรียบร้อยแล้ว ซึ่งช่วยลดความยุ่งยากของปัญหา signature ไม่ตรงอันเนื่องมาจากการจัดเรียงคีย์ของ JSON ใหม่)
-* **Baht Conversion Helper**: ช่วยคำนวณและเพิ่มฟิลด์ `amount_baht` (แปลงหน่วยสตางค์เป็นบาทให้เสร็จสรรพ) ทั้งในข้อมูล QR Code และข้อมูล Webhook เพื่อนำไปแสดงผลได้ทันที
+การเชื่อมต่อระบบรับเงินพร้อมเพย์ด้วยตัวเองมักมีข้อจำกัดที่ท้าทายต่อนักพัฒนาตลอดเวลา SDK ตัวนี้แก้จุดอ่อนทั้งหมดโดยนำเสนอ **2 ระบบการเชื่อมต่อแยกออกจากกันโดยสมบูรณ์** เพื่อให้นักพัฒนาเลือกใช้งานตามสถาปัตยกรรมของโครงการของตนเองอย่างชัดเจน:
+
+### 1️⃣ ระบบ Webhook Flow (`TMWeasyQRPaymentWebhook`)
+*   **รูปแบบการทำงาน**: ลูกค้าสแกนจ่ายเงิน -> TMWeasy ยิงคำขอยืนยันสัญญากลับมาที่ endpoint ของคุณ -> ตรวจสอบลายเซ็น MD5 Signature ทันที
+*   **แก้ไขปัญหา**: 
+    *   **Smart Key Sorting**: ปรับแก้ปัญหาการสลับตำแหน่งของคีย์ JSON ยามผ่าน Express parsing middleware ด้วยระบบ Fallback Key Sorting อัตโนมัติ ทำให้การคำนวณตรวจสอบลายเซ็นถูกต้อง 100%
+    *   **หน่วยสตางค์**: แปลงหน่วยสตางค์จาก API เป็นหน่วยบาท (`amount_baht` ตัวเลข float 2 ตำแหน่ง) ให้พร้อมเสิร์ฟทันทีใน Callback
+
+### 2️⃣ ระบบ Direct Bank Flow (`TMWeasyQRPayment`)
+*   **รูปแบบการทำงาน**: ดึงข้อมูลและตรวจสอบยอดโอนโดยตรงกับบัญชีธนาคารของคุณผ่าน **accode** (รหัสเข้ารหัสธนาคาร) และ **accountNo** (เลขบัญชีธนาคาร 10 หลัก) ได้ทันทีแบบ Real-time โดยไม่ต้องพึ่ง Webhook
+*   **แก้ไขปัญหา**: 
+    *   **รองรับ E-Wallet (ประเภท "03")**: ดึงข้อมูลและคำนวณ EMVCo Payload สำหรับ PromptPay E-Wallet ID ความยาว 10-20 หลัก (เช่น KBANK/SCB E-Wallet) พร้อมกับเบอร์โทรศัพท์และเลขบัตรประชาชนได้โดยตรง
+    *   **ความแม่นยำสูง**: ไม่จำเป็นต้องรอการยิง callback เข้ามา สามารถทำ Polling หรือยิง Check ยอดเงินแบบเรียลไทม์ฝั่งหลังบ้านได้อย่างเด็ดขาด
+
+---
+
+## 🌟 จุดเด่นของแพ็กเกจ (Key Features)
+
+*   **100% TypeScript & Strict Type Safety**: พัฒนาด้วย TypeScript ทุกบรรทัด **ไม่มีการใช้ `any` เด็ดขาด** 🛡️
+*   **Zero Core Dependencies**: ไร้แพ็กเกจภายนอกในระบบแกนหลัก (อาศัย Native Node `fetch` และ `crypto`) รวดเร็วและปราศจากช่องโหว่ความปลอดภัย
+*   **Independent Module Configs**: แยกการตั้งค่าคอนฟิก `TMWeasyQRPaymentWebhookConfig` และ `TMWeasyQRPaymentConfig` ออกจากกันโดยสิ้นเชิง ป้องกันการใส่ข้อมูลปะปน
+*   **Automatic Retry & Backoff**: ติดตั้งระบบยิงความพยายามใหม่แบบทวีคูณ (Exponential Backoff) เมื่อตรวจพบเครือข่ายขัดข้องชั่วขณะ ป้องกันระบบหยุดทำงานเมื่อเน็ตหลุด
+*   **Console QR Generator (ANSI)**: วาดรูปสแกน QR Code พร้อมเพย์ลงบน Terminal ได้ทันทีผ่านการเรียกใช้งานเบาๆ ช่วยให้เปิดจอมือถือสแกนจ่ายทดสอบระบบได้ในเวลาไม่ถึง 1 วินาที!
 
 ---
 
 ## 📦 การติดตั้ง (Installation)
 
-ติดตั้งผ่าน npm หรือ package manager ที่คุณต้องการ:
-
 ```bash
-npm install tmweasy-qr-payment-webhook
+npm install @riiixch/tmweasy-qr-payment
 ```
 
 ---
 
-## 🚀 เริ่มต้นใช้งานอย่างรวดเร็ว (Quick Start)
+## 🚀 1. คู่มือการใช้ Webhook Flow (`TMWeasyQRPaymentWebhook`)
 
-### 1. การตั้งค่า Client (Setup Client)
+ระบบนี้เหมาะสำหรับโครงการที่ใช้สถาปัตยกรรมแบบ **Event-Driven** โดยให้ฝั่งเซิร์ฟเวอร์หลักของ TMWeasy ส่งสัญญาณ Webhook เพื่ออนุมัติบิล
 
-```typescript
-import { TMWeasyClient } from 'tmweasy-qr-payment-webhook';
-
-const client = new TMWeasyClient({
-  username: 'your_tmweasy_username',
-  password: 'your_tmweasy_password',
-  conId: 'your_connection_id_from_settings',
-  // baseUrl: 'http://www.tmweasyapi.com/api_pph.php' // สามารถระบุ URL อื่นที่ต้องการได้ (ตัวหลักจะเป็น thaighost.net)
-});
-```
-
----
-
-## 💻 คู่มือการใช้งาน API แต่ละขั้นตอน (API Steps Guide)
-
-### 1️⃣ Step 1: สร้างเซสชันชำระเงิน (Create Payment Session)
-สร้างรหัสชำระเงิน `id_pay` โดยระบุยอดเงินเป็นบาท (จำนวนเต็ม), ID อ้างอิงลูกค้า, และ IP ของลูกค้า
-
-```typescript
-import { TMWeasyValidationError } from 'tmweasy-qr-payment-webhook';
-
-async function initiatePayment() {
-  try {
-    const response = await client.createPay({
-      amount: 50, // จำนวนเต็มบวก ไม่มีทศนิยม เช่น 50 บาท (ไม่ใช่ 50.00)
-      ref1: 'user_id_9999', // ข้อมูลอ้างอิงลูกค้า (เช่น username, email, phone)
-      ip: '203.0.113.195'  // IP ของลูกค้าผู้ทำรายการ
-    });
-
-    if (response.status === 1) {
-      console.log('สร้างรายการสำเร็จ! Payment ID:', response.id_pay);
-      return response.id_pay; // นำ ID นี้ไปใช้ใน Step 2 ต่อไป
-    } else {
-      console.error('API ปฏิเสธการทำรายการ:', response.msg);
-    }
-  } catch (error) {
-    if (error instanceof TMWeasyValidationError) {
-      console.error('ข้อมูลนำเข้าไม่ถูกต้อง:', error.message);
-    }
-  }
-}
-```
-
-### 2️⃣ Step 2: ดึงรายละเอียดการชำระเงินและภาพ QR Code (Get Payment Details & QR Code)
-นำ `id_pay` มาขอรับภาพ QR Code ในรูปแบบ Base64 และข้อมูลอื่นๆ
-
-```typescript
-async function getQRCode(idPay: string) {
-  try {
-    const response = await client.detailPay({
-      idPay: idPay,
-      promptpayId: '0812345678', // เบอร์พร้อมเพย์ หรือเลขบัตรประชาชนของคุณที่ผูกไว้กับธนาคาร
-      type: '01' // '01' สำหรับ เบอร์โทรศัพท์, '02' สำหรับ เลขบัตรประชาชน
-    });
-
-    if (response.status === 1) {
-      console.log('ยอดเงินที่ลูกค้าต้องโอน (สตางค์):', response.amount_check); // เช่น "5000" (50 บาท 00 สตางค์)
-      console.log('ยอดเงินที่ลูกค้าต้องโอน (บาท - แปลงโดย SDK):', response.amount_baht); // 50 (นำไปแสดงผลได้ทันที)
-      console.log('เวลาคงเหลือ (วินาที):', response.time_out);
-      
-      // ภาพ QR Code รูปแบบ Base64 (สามารถนำไปใส่ใน tag <img src="..."> ได้เลย)
-      console.log('Base64 QR Code:', response.qr_image_base64);
-    } else {
-      console.error('ไม่สามารถดึง QR Code ได้:', response.msg);
-    }
-  } catch (error) {
-    console.error('เกิดข้อผิดพลาด:', error.message);
-  }
-}
-```
-
-### ❌ การยกเลิกเซสชันชำระเงิน (Cancel Payment Session)
-> ⚠️ **ข้อสำคัญ**: การยกเลิกจะทำได้ต่อเมื่อเวลาคงเหลือ (`time_out`) จากขั้นตอนที่ 2 **ติดลบ** (หมดเวลาชำระเงินแล้ว) เท่านั้น
-
-```typescript
-async function cancelExpiredPayment(idPay: string) {
-  try {
-    const response = await client.cancelPay(idPay);
-    
-    if (response.status === 1) {
-      console.log('ยกเลิกรายการชำระเงินสำเร็จ!');
-    } else {
-      console.error('ไม่สามารถยกเลิกได้:', response.msg);
-    }
-  } catch (error) {
-    console.error('เกิดข้อผิดพลาดในการยกเลิก:', error.message);
-  }
-}
-```
-
----
-
-## 🔒 3️⃣ Step 3: การรับและตรวจสอบ Webhook (Handling & Verifying Webhook)
-
-เมื่อมีลูกค้าโอนเงินสำเร็จ ทางระบบ TMWeasy จะส่งข้อมูล POST Request มาที่ Webhook URL ของคุณ หน้าที่ของคุณคือตรวจความปลอดภัยด้วย **API Key** ผ่านการเช็ค MD5 Signature
-
-### 🚨 ปัญหาที่พบบ่อย (Common Pitfall)
-เฟรมเวิร์กเช่น Express มักจะติดตั้ง middleware `express.json()` ซึ่งจะแปลง JSON เป็น JavaScript Object โดยอัตโนมัติ ทำให้การเปลี่ยน JSON เป็น string อีกครั้ง (`JSON.stringify`) อาจมีช่องว่างและการสลับตำแหน่งของคีย์ที่แตกต่างไปจาก String ต้นฉบับ ส่งผลให้การเช็ค signature ล้มเหลว
-
-#### 🛠️ วิธีแก้ที่แนะนำ: ดึงข้อมูลแบบ Raw Body หรือใช้ ฟังก์ชันแปลงคีย์อัตโนมัติของ SDK
-
-เราขอนำเสนอวิธีสร้าง Endpoint ที่ปลอดภัยที่สุดด้วย 2 เฟรมเวิร์กยอดนิยม:
-
-### 🟢 1. ตัวอย่างการใช้ Express (แนะนำวิธี Raw Body)
-
-เพื่อประสิทธิภาพสูงสุด ควรตั้งค่า Express ให้บันทึก Raw Body ไว้ล่วงหน้าในไฟล์ตั้งค่า Server:
+### โค้ดตัวอย่าง Express Server สมบูรณ์แบบ (Webhook Flow)
 
 ```typescript
 import express from 'express';
-import { TMWeasyWebhook, TMWeasySignatureError } from 'tmweasy-qr-payment-webhook';
+import { TMWeasyQRPaymentWebhook, TMWeasyWebhook, AutoCancelHandle } from '@riiixch/tmweasy-qr-payment';
 
 const app = express();
-const API_KEY = 'your_tmweasy_api_key'; // ค้นหาได้ในหน้าตั้งค่าเว็บ TMWeasy
+const API_KEY = 'your_tmweasy_api_key'; // ค้นหาได้ในหน้าเซ็ตติ้ง TMWeasy
 
-// บันทึก Raw Body ไว้ใน req.rawBody สำหรับใช้ในการคำนวณ MD5
-app.use(express.json({
-  verify: (req: any, res, buf) => {
-    req.rawBody = buf.toString('utf8');
-  }
-}));
-
-app.post('/webhook/tmweasy', (req: any, res) => {
-  try {
-    // ดึง raw data string จาก payload และ signature
-    const dataString = typeof req.body.data === 'string' ? req.body.data : JSON.stringify(req.body.data);
-    const signature = req.body.signature;
-
-    // ตรวจสอบลายเซ็นและดึงข้อมูลที่ปลอดภัย
-    const verifiedData = TMWeasyWebhook.verifyAndParse({
-      data: req.rawBody ? JSON.parse(req.rawBody).data : dataString,
-      signature: signature
-    }, API_KEY);
-
-    console.log('ชำระเงินสำเร็จแล้ว! ข้อมูลชำระเงินจริง:');
-    console.log('ID Pay:', verifiedData.id_pay);
-    console.log('รหัสอ้างอิงลูกค้า (ref1):', verifiedData.ref1);
-    console.log('ยอดเงินที่รับชำระ (บาท):', verifiedData.amount_baht); // เช่น 50.00
-    console.log('วันที่และเวลาโอน:', verifiedData.date_pay); // รูปแบบ YYYY-MM-DD HH:mm
-
-    // ตอบกลับสถานะสำเร็จให้ระบบ API ทราบ
-    return res.status(200).json({ status: 1 });
-  } catch (error) {
-    if (error instanceof TMWeasySignatureError) {
-      console.error('ความปลอดภัยถูกบุกรุก! Signature ไม่ตรงกับคีย์ลับ!');
-      return res.status(403).json({ error: 'Forbidden' });
-    }
-    
-    console.error('เกิดข้อผิดพลาดในการตรวจสอบ:', error.message);
-    return res.status(400).json({ error: 'Bad Request' });
-  }
-});
-
-app.listen(3000, () => console.log('Server running on port 3000'));
-```
-
-### ⚡ 2. ตัวอย่างการใช้ Fastify
-
-Fastify สามารถใช้งานร่วมกับ SDK ได้อย่างราบรื่นโดยไม่เปลี่ยนคีย์ของ JSON:
-
-```typescript
-import Fastify from 'fastify';
-import { TMWeasyWebhook, TMWeasySignatureError } from 'tmweasy-qr-payment-webhook';
-
-const fastify = Fastify();
-const API_KEY = 'your_tmweasy_api_key';
-
-fastify.post('/webhook/tmweasy', async (request, reply) => {
-  const body = request.body as { data: any; signature: string };
-
-  try {
-    // Fastify เก็บข้อมูล JSON ค่อนข้างถูกต้อง สามารถส่งเข้าตรวจสอบได้ทันที
-    const verifiedData = TMWeasyWebhook.verifyAndParse({
-      data: body.data,
-      signature: body.signature
-    }, API_KEY);
-
-    fastify.log.info(`เติมเงินสำเร็จสำหรับ ID: ${verifiedData.ref1} ยอดเงิน: ${verifiedData.amount_baht} บาท`);
-
-    // ตอบกลับ JSON {"status":1} เพื่อยืนยันว่าได้รับข้อมูลสำเร็จ
-    return reply.status(200).send({ status: 1 });
-  } catch (error) {
-    if (error instanceof TMWeasySignatureError) {
-      return reply.status(403).send({ error: 'Signature mismatched' });
-    }
-    return reply.status(400).send({ error: 'Invalid Webhook Data' });
-  }
-});
-
-fastify.listen({ port: 3000 });
-```
-
----
-
-## 🚫 การจัดการข้อผิดพลาด (Exception Handling)
-
-SDK นี้โยน Custom Error Classes ที่สืบทอดมาจาก `TMWeasyError` ทำให้นักพัฒนาสามารถแยกแยะหมวดหมู่ของข้อผิดพลาดได้อย่างมีระเบียบ:
-
-* **`TMWeasyValidationError`**: เกิดข้อผิดพลาดจากข้อมูลนำเข้า (เช่น ยอดเงินเป็นทศนิยม หรือ IP/ประเภทพร้อมเพย์ผิดฟอร์แมต)
-* **`TMWeasyAPIError`**: เกิดข้อผิดพลาดจากเซิร์ฟเวอร์ปลายทางของ TMWeasy หรือยิง API ไม่ผ่าน (มี status เป็น 0)
-* **`TMWeasySignatureError`**: สัญญาณเตือนความปลอดภัยสูง เกิดเมื่อการตรวจสอบลายเซ็น MD5 ของ Webhook ล้มเหลว
-
-```typescript
-import { TMWeasyError, TMWeasyValidationError, TMWeasyAPIError } from 'tmweasy-qr-payment-webhook';
-
-try {
-  await client.createPay({ amount: 50.5, ref1: '', ip: 'bad_ip' });
-} catch (error) {
-  if (error instanceof TMWeasyValidationError) {
-    console.error(`ข้อมูลผิดที่ฟิลด์ "${error.field}":`, error.message);
-  } else if (error instanceof TMWeasyAPIError) {
-    console.error('เซิร์ฟเวอร์ตอบกลับไม่ผ่าน หรือ HTTP Error:', error.message);
-  } else if (error instanceof TMWeasyError) {
-    console.error('ข้อผิดพลาดอื่นๆ ของ SDK:', error.message);
-  }
-}
-```
-
----
-
-## ⚡ ฟีเจอร์ขั้นสูง (Advanced Features)
-
-### 1. ระบบพยายามใหม่และรับมือเน็ตหลุด (Automatic Retry & Backoff)
-คุณสามารถตั้งค่าให้ตัว SDK ทำการยิงความพยายามใหม่แบบอัตโนมัติเมื่อเกิดปัญหาเน็ตหลุด หรือฝั่ง API ขัดข้องชั่วคราว (HTTP Status 5xx) โดยใช้กลไก **Exponential Backoff** (เบิ้ลเวลารอรอบถัดไปเป็นเท่าตัว เพื่อความทนทานสูงสุดของแอปพลิเคชัน):
-
-```typescript
-import { TMWeasyClient } from 'tmweasy-qr-payment-webhook';
-
-const client = new TMWeasyClient({
+// ตั้งค่า Client Webhook (ชี้ไปที่ api_pph.php อัตโนมัติ)
+const client = new TMWeasyQRPaymentWebhook({
   username: 'your_username',
   password: 'your_password',
   conId: 'your_con_id',
   retryOptions: {
-    retries: 3,       // ทำการลองใหม่สูงสุด 3 ครั้งเมื่อเกิดข้อผิดพลาดด้านเน็ตหรือเซิร์ฟเวอร์ปลายทาง
-    minTimeout: 1000, // เวลารอเริ่มต้นก่อนทำซ้ำรอบแรก (1 วินาที)
-    factor: 2,        // อัตราการคูณความล่าช้าแบบทวีคูณ (1s -> 2s -> 4s)
+    retries: 3,       // พยายามยิงส่งซ้ำสูงสุด 3 ครั้งยามเน็ตหลุด
+    minTimeout: 1000, // เวลารอบแรก 1 วินาที
+    factor: 2         // คูณเวลารอแบบทวีคูณ (1s -> 2s -> 4s)
   }
 });
+
+// แผนที่สำหรับเก็บงานนับถอยหลังยกเลิก (Active Cancellers Map)
+const activeCancellers = new Map<string, AutoCancelHandle>();
+
+// 1️⃣ ขอชำระเงิน: สร้างและแสดงผล QR Code พร้อมจำกัดเวลา
+app.post('/api/checkout-webhook', async (req, res) => {
+  try {
+    // Step 1: ขอรหัสชำระเงิน
+    const session = await client.createPay({ amount: 50, ref1: 'order_12345', ip: '127.0.0.1' });
+    
+    // Step 2: สร้างรูป QR Code และดึงเวลาหมดอายุ
+    const qrData = await client.detailPay({
+      idPay: session.id_pay!,
+      promptpayId: '0812345678', // เบอร์พร้อมเพย์รับเงินของคุณ
+      type: '01'                 // '01' = เบอร์โทรศัพท์, '02' = บัตรประชาชน
+    });
+
+    if (qrData.status === 1 && qrData.time_out) {
+      // ⏳ สั่งตั้งเวลาทำการยกเลิกบิลอัตโนมัติเมื่อหมดเวลา
+      const handle = client.scheduleAutoCancel(session.id_pay!, qrData.time_out, {
+        onSuccess: (response) => console.log(`[ID ${session.id_pay}] ถูกยกเลิกอัตโนมัติสำเร็จ:`, response.msg),
+        onError: (err) => console.error(`[ID ${session.id_pay}] ล้มเหลวในการยกเลิกอัตโนมัติ:`, err.message)
+      });
+
+      // บันทึกตัวควบคุมเก็บไว้ด้วย ID Pay
+      activeCancellers.set(session.id_pay!, handle);
+    }
+
+    res.json({
+      success: true,
+      amount: qrData.amount_baht,       // ยอดเงินโอนจริงในหน่วยบาท (แปลงทศนิยมให้เสร็จ)
+      qrBase64: qrData.qr_image_base64, // รูปพร้อมเพย์แสดงผล <img src="..."> ได้เลย
+      timeLeft: qrData.time_out         // วินาทีคงเหลือในการชำระ
+    });
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// 2️⃣ รับ Webhook: เมื่อลูกค้าจ่ายสำเร็จ ตรวจลายเซ็นและหยุดตัวนับเวลาถอยหลังทันที
+app.post('/webhook/payment', express.json(), (req, res) => {
+  try {
+    // Step 3: ตรวจสอบความถูกต้องของ Signature
+    const verified = TMWeasyWebhook.verifyAndParse(req.body, API_KEY);
+
+    if (verified.status === 1) {
+      console.log(`🎉 ได้รับการโอนเงินจำนวน ${verified.amount_baht} บาทสำเร็จ!`);
+      
+      // 🛑 หยุดตัวจับเวลานับถอยหลังยกเลิกทันที (ลูกค้าทำเสร็จสมบูรณ์!)
+      const handle = activeCancellers.get(verified.id_pay);
+      if (handle) {
+        handle.stop();
+        activeCancellers.delete(verified.id_pay);
+      }
+
+      // จัดส่งเครดิต/สินค้าให้ผู้จ่ายในส่วนนี้...
+    }
+
+    res.status(200).json({ status: 1 });
+  } catch (error: any) {
+    console.error('ลายเซ็นไม่ถูกต้องหรือเกิดการบุกรุก!', error.message);
+    res.status(403).json({ error: 'Unauthorized signature' });
+  }
+});
+
+app.listen(3000, () => console.log('Server Webhook running on port 3000'));
 ```
 
-### 2. วาดภาพ QR Code ใน Terminal (ANSI Console QR Code)
-หากคุณต้องการให้นำรหัสพร้อมเพย์มาวาดแสดงผลภาพ QR Code เป็นตัวอักษรสีดำขาวบนหน้าต่าง Terminal โดยตรง (เพื่อความสะดวกและรวดเร็วสูงสุดในการใช้โทรศัพท์มือถือสแกนจ่ายเงินจริงเพื่อทดสอบระบบระหว่างเขียนแอปพลิเคชัน) 
+---
+
+## 🚀 2. คู่มือการใช้ Direct Bank Flow (`TMWeasyQRPayment`)
+
+เหมาะสำหรับโครงการที่อยาก **ยืนยันการโอนเงินกับบัญชีธนาคารโดยตรง (Direct Check)** ผ่านธนาคารโดยใช้ `accode` (ไม่ต้องพึ่งสัญญาณ Webhook จากภายนอก)
+
+### โค้ดตัวอย่าง Express Server สมบูรณ์แบบ (Direct Bank Flow)
+
+```typescript
+import express from 'express';
+import { TMWeasyQRPayment, AutoCancelHandle } from '@riiixch/tmweasy-qr-payment';
+
+const app = express();
+
+// ตั้งค่า Client ยืนยันยอดตรง (ชี้ไปที่ apipp.php อัตโนมัติและรองรับ HTTPS)
+const directPayment = new TMWeasyQRPayment({
+  username: 'your_username',
+  password: 'your_password',
+  conId: 'your_con_id',
+  accode: 'your_accode_from_settings', // ใส่ที่นี่เพื่อใช้เป็นค่ากลางสะดวกๆ
+  accountNo: '0123456789'              // เลขบัญชีธนาคารรับเงิน 10 หลัก
+});
+
+const activeCancellers = new Map<string, AutoCancelHandle>();
+
+// 1️⃣ ลูกค้าเปิดยอด: สร้างสิทธิ์และภาพ QR Code (รองรับ E-Wallet "03")
+app.post('/api/checkout-direct', async (req, res) => {
+  try {
+    // Step 1: สร้าง session การชำระเงิน
+    const session = await directPayment.createPay({
+      amount: 150, // จำนวนเงินหน่วยบาท
+      ref1: 'direct_order_998',
+      ip: '127.0.0.1'
+    });
+
+    // Step 2: สร้างบิลและรับ QR Code ภาพพร้อม EMVCo payload
+    const qrData = await directPayment.detailPay({
+      idPay: session.id_pay!,
+      promptpayId: '140001234567890', // E-Wallet ID หรือเบอร์พร้อมเพย์รับเงิน
+      type: '03'                       // '01' = มือถือ, '02' = บัตรประชาชน, '03' = E-Wallet ID
+    });
+
+    if (qrData.status === 1 && qrData.time_out) {
+      // ⏳ สั่งตั้งเวลานับถอยหลังยกเลิกอัตโนมัติหากไม่จ่ายในเวลา
+      const handle = directPayment.scheduleAutoCancel(session.id_pay!, qrData.time_out, {
+        onSuccess: () => console.log(`[ID ${session.id_pay}] สั่งยกเลิกสำเร็จเนื่องจากหมดเวลา`),
+        onError: (err) => console.error(`[ID ${session.id_pay}] สั่งยกเลิกเมื่อหมดเวลาล้มเหลว:`, err.message)
+      });
+      activeCancellers.set(session.id_pay!, handle);
+    }
+
+    res.json({
+      success: true,
+      idPay: session.id_pay,
+      qrBase64: qrData.qr_image_base64,
+      timeLeft: qrData.time_out
+    });
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// 2️⃣ ปุ่มกดตรวจสอบยอด/หรือรัน Polling: ยืนยันเงินโอนกับธนาคารโดยตรง (Step 3 - confirm)
+app.post('/api/verify-payment', async (req, res) => {
+  const { idPay, clientIp } = req.body;
+
+  try {
+    // Step 3: สั่งเช็คยืนยันยอดเงินผ่านรหัส accode และเลขบัญชีธนาคารโดยตรง
+    const verification = await directPayment.confirmPay({
+      idPay: idPay,
+      ip: clientIp, // IP ของลูกค้าขณะกดยืนยันตัวตน
+      // accode และ accountNo จะถูกดักดึงจาก Config โดยอัตโนมัติ หรือส่ง override ตรงนี้ได้
+    });
+
+    if (verification.status === 1) {
+      console.log(`🎉 ธนาคารตอบกลับ: ยอดเงิน ${verification.amount} บาท โอนสำเร็จจริงในวันที่ ${verification.date_pay}!`);
+      
+      // 🛑 หยุดตัวจับเวลานับถอยหลังยกเลิกทันที (จ่ายเงินเสร็จเรียบร้อย!)
+      const handle = activeCancellers.get(idPay);
+      if (handle) {
+        handle.stop();
+        activeCancellers.delete(idPay);
+      }
+
+      return res.json({ success: true, message: 'ชำระเงินสำเร็จแล้ว!' });
+    } else {
+      return res.json({ success: false, message: verification.msg || 'ยังไม่พบยอดเงินโอนเข้าบัญชี' });
+    }
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+app.listen(3001, () => console.log('Server Direct Bank running on port 3001'));
+```
+
+---
+
+## ⚡ ฟีเจอร์ขั้นสูงสำหรับธุรกิจ (Advanced Business Utilities)
+
+### 1. การวาดภาพ QR Code ใน Terminal (ANSI Console QR Code)
+สำหรับนักพัฒนาที่ต้องการนำ EMVCo payload มาสั่งสแกนทดสอบจ่ายเงินจริงผ่าน Console หน้าต่างระหว่างพัฒนาแอปพลิเคชัน
 
 > [!NOTE]
-> ฟีเจอร์นี้เรียกใช้โมดูลแบบ **Dynamic Loading** โดยกำหนดให้ต้องติดตั้งแพ็กเกจ `qrcode` ก่อนใช้งาน:
+> ฟีเจอร์นี้ต้องติดตั้งแพ็กเกจ `qrcode` ในเครื่องก่อนใช้งาน:
 > ```bash
 > npm install qrcode
 > ```
 
-ตัวอย่างวิธีการใช้ร่วมกับเมธอด `detailPay`:
-
 ```typescript
-import { TMWeasyClient, renderQRToConsole } from 'tmweasy-qr-payment-webhook';
+import { renderQRToConsole } from '@riiixch/tmweasy-qr-payment';
 
-const client = new TMWeasyClient({ ... });
-
-const response = await client.detailPay({
-  idPay: '754349',
-  promptpayId: '0812345678',
-  type: '01'
-});
-
-if (response.status === 1 && response.promptpay_payload) {
-  // วาดรูป QR Code ขนาดกะทัดรัดลงบน Terminal ทันที!
-  await renderQRToConsole(response.promptpay_payload);
+// นำ promptpay_payload ที่ได้จากเมธอด detailPay มาแสดงผล
+if (qrData.status === 1 && qrData.promptpay_payload) {
+  await renderQRToConsole(qrData.promptpay_payload);
 }
 ```
+
+### 2. การจัดการข้อยกเว้นและข้อผิดพลาด (Exception Handling)
+SDK นี้โยนข้อผิดพลาดที่มีคลาสระบุตัวตนชัดเจน ทำให้ดักครอบ `try-catch` และควบคุมระบบหลักไม่ให้หยุดทำงานได้ง่าย:
+
+*   **`TMWeasyValidationError`**: ข้อมูลนำเข้าฝั่งหลังบ้านผิดพลาด (เช่น ยอดเงินไม่ใช่เลขจำนวนเต็ม หรือเบอร์โทรศัพท์/เลขบัญชีไม่ตรงจำนวนหลัก)
+*   **`TMWeasyAPIError`**: ได้รับข้อความปฏิเสธจาก API ฝั่งปลายทาง (status เป็น 0) หรือปัญหาเน็ตหลุด
+*   **`TMWeasySignatureError`**: สัญญาณเตือนภัยด้านความมั่นคง: ลายเซ็น MD5 Webhook ไม่ตรงกับที่ถอดรหัสผ่าน API Key
+
+```typescript
+import { TMWeasyValidationError, TMWeasyAPIError, TMWeasyError } from '@riiixch/tmweasy-qr-payment';
+
+try {
+  await directPayment.confirmPay({ idPay: '123', ip: '127.0.0.1', accountNo: 'bad_number' });
+} catch (error) {
+  if (error instanceof TMWeasyValidationError) {
+    console.error(`ข้อมูลผิดปกติที่ช่อง "${error.field}":`, error.message);
+  } else if (error instanceof TMWeasyAPIError) {
+    console.error(`มีปัญหาการสื่อสาร API (HTTP ${error.statusCode}):`, error.message);
+  } else if (error instanceof TMWeasyError) {
+    console.error('ข้อผิดพลาดทั่วไปของ SDK:', error.message);
+  }
+}
+```
+
+---
+
+## 👥 ผู้พัฒนา (Developer Credit)
+
+*   **RIIIXCH** — [GitHub Profile](https://github.com/riiixch)
 
 ---
 
 ## 📄 ใบอนุญาต (License)
 
-คำสั่งและโค้ดภายในโครงการนี้อยู่ภายใต้ใบอนุญาต [ISC License](LICENSE).
-
+ชุดคำสั่งและโค้ดภายในโครงการนี้อยู่ภายใต้ข้อตกลงใบอนุญาต [ISC License](LICENSE).

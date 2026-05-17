@@ -1,5 +1,5 @@
 {
-  "name": "tmweasy-qr-payment-webhook",
+  "name": "tmweasy-qr-payment",
   "version": "1.0.0",
   "description": "TypeScript SDK for TMWeasy PromptPay QR Webhook payment API",
   "main": "./dist/index.js",
@@ -29,7 +29,7 @@
     "thai-payment",
     "payment-gateway"
   ],
-  "author": "",
+  "author": "RIIIXCH (https://github.com/riiixch)",
   "license": "ISC",
   "devDependencies": {
     "@types/node": "^25.8.0",

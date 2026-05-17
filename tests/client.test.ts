@@ -1,32 +1,32 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { TMWeasyClient } from '../src/client';
+import { TMWeasyQRPaymentWebhook } from '../src/client';
 import { TMWeasyValidationError, TMWeasyAPIError } from '../src/errors';
 
-describe('TMWeasyClient', () => {
+describe('TMWeasyQRPaymentWebhook', () => {
   const config = {
     username: 'testuser',
     password: 'testpassword',
     conId: 'testconid',
   };
 
-  let client: TMWeasyClient;
+  let client: TMWeasyQRPaymentWebhook;
 
   beforeEach(() => {
-    client = new TMWeasyClient(config);
+    client = new TMWeasyQRPaymentWebhook(config);
     vi.stubGlobal('fetch', vi.fn());
   });
 
   describe('Constructor Validation', () => {
     it('should throw validation error if username is empty', () => {
-      expect(() => new TMWeasyClient({ ...config, username: '' })).toThrow(TMWeasyValidationError);
+      expect(() => new TMWeasyQRPaymentWebhook({ ...config, username: '' })).toThrow(TMWeasyValidationError);
     });
 
     it('should throw validation error if password is empty', () => {
-      expect(() => new TMWeasyClient({ ...config, password: '' })).toThrow(TMWeasyValidationError);
+      expect(() => new TMWeasyQRPaymentWebhook({ ...config, password: '' })).toThrow(TMWeasyValidationError);
     });
 
     it('should throw validation error if conId is empty', () => {
-      expect(() => new TMWeasyClient({ ...config, conId: '' })).toThrow(TMWeasyValidationError);
+      expect(() => new TMWeasyQRPaymentWebhook({ ...config, conId: '' })).toThrow(TMWeasyValidationError);
     });
   });
 
@@ -142,7 +142,7 @@ describe('TMWeasyClient', () => {
 
     it('should throw validation error if PromptPay phone is invalid format', async () => {
       await expect(client.detailPay({ ...validOptions, promptpayId: '123' })).rejects.toThrow(
-        'PromptPay Mobile number must be a numeric string between 10 and 15 digits'
+        'PromptPay Mobile number must be a numeric string of exactly 10 digits'
       );
     });
 

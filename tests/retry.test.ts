@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { TMWeasyClient } from '../src/client';
+import { TMWeasyQRPaymentWebhook } from '../src/client';
 import { TMWeasyAPIError } from '../src/errors';
 
-describe('TMWeasyClient - Automatic Retry & Backoff', () => {
+describe('TMWeasyQRPaymentWebhook - Automatic Retry & Backoff', () => {
   const config = {
     username: 'testuser',
     password: 'testpassword',
@@ -32,7 +32,7 @@ describe('TMWeasyClient - Automatic Retry & Backoff', () => {
     };
     const fetchMock = vi.mocked(fetch).mockResolvedValue(mockResponse as Response);
 
-    const client = new TMWeasyClient(config);
+    const client = new TMWeasyQRPaymentWebhook(config);
     const result = await client.createPay({ amount: 10, ref1: 'test_ref', ip: '127.0.0.1' });
 
     expect(result.status).toBe(1);
@@ -55,7 +55,7 @@ describe('TMWeasyClient - Automatic Retry & Backoff', () => {
       .mockResolvedValueOnce(mockFail as Response) // 1st try: fail
       .mockResolvedValueOnce(mockSuccess as Response); // 2nd try: success
 
-    const client = new TMWeasyClient(config);
+    const client = new TMWeasyQRPaymentWebhook(config);
 
     // Trigger payment creation
     const promise = client.createPay({ amount: 20, ref1: 'test_ref_2', ip: '127.0.0.1' });
@@ -78,7 +78,7 @@ describe('TMWeasyClient - Automatic Retry & Backoff', () => {
 
     const fetchMock = vi.mocked(fetch).mockResolvedValue(mockFail as Response);
 
-    const client = new TMWeasyClient(config);
+    const client = new TMWeasyQRPaymentWebhook(config);
 
     // Trigger payment creation
     const promise = client.createPay({ amount: 30, ref1: 'test_ref_3', ip: '127.0.0.1' });

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { TMWeasyClient } from '../src/client';
+import { TMWeasyQRPaymentWebhook } from '../src/client';
 import { renderQRToConsole } from '../src/terminal';
 
 describe('Terminal QR Code Rendering & EMVCo PromptPay Generator', () => {
@@ -10,13 +10,13 @@ describe('Terminal QR Code Rendering & EMVCo PromptPay Generator', () => {
   describe('CRC16 & EMVCo Generator', () => {
     it('should calculate CRC16 CCITT correctly matching the ISO standard vector', () => {
       // Standard CCITT verification vector for input "123456789" is "29B1"
-      const crc = TMWeasyClient.calculateCRC16('123456789');
+      const crc = TMWeasyQRPaymentWebhook.calculateCRC16('123456789');
       expect(crc).toBe('29B1');
     });
 
     it('should generate correct EMVCo payload for Mobile Phone PromptPay', () => {
       // PromptPay Mobile format with amount 1901 Satangs (19.01 Baht)
-      const payload = TMWeasyClient.generatePromptPayPayload('0812345678', '01', 1901);
+      const payload = TMWeasyQRPaymentWebhook.generatePromptPayPayload('0812345678', '01', 1901);
       
       expect(payload).toContain('000201'); // Version tag
       expect(payload).toContain('010212'); // Dynamic QR type
@@ -30,7 +30,7 @@ describe('Terminal QR Code Rendering & EMVCo PromptPay Generator', () => {
 
     it('should generate correct EMVCo payload for National ID PromptPay', () => {
       // PromptPay National ID format with amount 5000 Satangs (50.00 Baht)
-      const payload = TMWeasyClient.generatePromptPayPayload('1234567890123', '02', 5000);
+      const payload = TMWeasyQRPaymentWebhook.generatePromptPayPayload('1234567890123', '02', 5000);
       
       expect(payload).toContain('000201'); // Version
       expect(payload).toContain('010212'); // Dynamic
@@ -45,7 +45,7 @@ describe('Terminal QR Code Rendering & EMVCo PromptPay Generator', () => {
     it('should render successfully to terminal when qrcode package is present', async () => {
       const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
       
-      const payload = TMWeasyClient.generatePromptPayPayload('0812345678', '01', 1000);
+      const payload = TMWeasyQRPaymentWebhook.generatePromptPayPayload('0812345678', '01', 1000);
       await expect(renderQRToConsole(payload)).resolves.not.toThrow();
       
       expect(logSpy).toHaveBeenCalled();

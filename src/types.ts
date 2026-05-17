@@ -11,9 +11,9 @@ export interface RetryOptions {
 }
 
 /**
- * Configuration options for the TMWeasy Client
+ * Configuration options for the TMWeasy QR Payment Webhook Client
  */
-export interface TMWeasyConfig {
+export interface TMWeasyQRPaymentWebhookConfig {
   /** TMWeasy username */
   username: string;
   /** TMWeasy password */
@@ -23,6 +23,31 @@ export interface TMWeasyConfig {
   /**
    * Optional custom API Base URL.
    * Defaults to 'http://tmwallet.thaighost.net/api_pph.php'
+   */
+  baseUrl?: string;
+  /**
+   * Optional configuration for automatic retrying when request fails
+   */
+  retryOptions?: RetryOptions;
+}
+
+/**
+ * Configuration options for the TMWeasy QR Payment Direct Bank Client
+ */
+export interface TMWeasyQRPaymentConfig {
+  /** TMWeasy username */
+  username: string;
+  /** TMWeasy password */
+  password: string;
+  /** Connection ID obtained from the TMWeasy settings panel */
+  conId: string;
+  /** The accode obtained from banking credentials encoding */
+  accode?: string;
+  /** The merchant bank account number (exactly 10 digits) */
+  accountNo?: string;
+  /**
+   * Optional custom API Base URL for direct confirmation.
+   * Defaults to 'https://tmwallet.thaighost.net/apipp.php'
    */
   baseUrl?: string;
   /**
@@ -66,8 +91,9 @@ export interface CreatePayResponse {
  * PromptPay identifier type:
  * - '01': Mobile Phone Number (e.g. 0812345678)
  * - '02': National ID Card Number (13 digits)
+ * - '03': E-Wallet ID (15 digits)
  */
-export type PromptPayType = '01' | '02';
+export type PromptPayType = '01' | '02' | '03';
 
 /**
  * Parameters to request payment details and QR code (Step 2)
@@ -163,4 +189,54 @@ export interface ParsedWebhookData extends WebhookData {
    * E.g. 19.01
    */
   amount_baht: number;
+}
+
+/**
+ * Callback options for scheduling automatic payment cancellation
+ */
+export interface AutoCancelOptions {
+  /** Optional callback triggered when the automatic cancellation completes successfully */
+  onSuccess?: (response: CancelPayResponse) => void | Promise<void>;
+  /** Optional callback triggered when the automatic cancellation fails */
+  onError?: (error: Error) => void | Promise<void>;
+}
+
+/**
+ * Handle returned by scheduleAutoCancel to manage the scheduled cancellation
+ */
+export interface AutoCancelHandle {
+  /** Stops the scheduled cancellation timer immediately. Call this when payment is successful. */
+  stop: () => void;
+  /** Checks if the cancellation timer has already fired and invoked the cancel request. */
+  hasFired: () => boolean;
+}
+
+/**
+ * Parameters to verify bank direct payment (Step 3)
+ */
+export interface ConfirmPayOptions {
+  /** The payment ID obtained from Step 1 */
+  idPay: string | number;
+  /** The IP address of the customer making/confirming the transaction */
+  ip: string;
+  /** The merchant 10-digit bank account number. Optional if pre-configured globally. */
+  accountNo?: string;
+  /** The bank credentials encoding token (accode). Optional if pre-configured globally. */
+  accode?: string;
+}
+
+/**
+ * API Response from Direct Confirm payment request (Step 3)
+ */
+export interface ConfirmPayResponse {
+  /** Status of the request: 1 for success (paid), 0 for failure/pending */
+  status: 0 | 1;
+  /** Customer reference ID (passed as ref1 in Step 1) */
+  ref1?: string;
+  /** The paid amount as a number in Baht (float). */
+  amount?: number;
+  /** Date and time of payment in format "YYYY-MM-DD HH:mm" if successful */
+  date_pay?: string;
+  /** Error message. Present only if status is 0. */
+  msg?: string;
 }

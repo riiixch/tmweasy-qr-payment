@@ -517,4 +517,4 @@ const direct = new TMWeasyQRPayment(config: TMWeasyQRPaymentConfig);
 
 ## 📄 ใบอนุญาต (License)
 
-ชุดคำสั่งและโค้ดภายในโครงการนี้อยู่ภายใต้ข้อตกลงใบอนุญาต [ISC License](LICENSE).
+ชุดคำสั่งและไลบรารีนี้ถูกเผยแพร่อยู่ภายใต้ข้อตกลงใบอนุญาตแบบ **[ISC License](LICENSE)** - สงวนลิขสิทธิ์ลิขสิทธิ์โดย RIIIXCH © 2026

@@ -14,7 +14,9 @@ describe('TMWeasyQRPayment (Direct Bank API)', () => {
 
   beforeEach(() => {
     vi.stubGlobal('fetch', vi.fn());
-    vi.useFakeTimers();
+    vi.useFakeTimers({
+      toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date']
+    });
   });
 
   afterEach(() => {

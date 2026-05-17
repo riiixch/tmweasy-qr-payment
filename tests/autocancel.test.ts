@@ -12,7 +12,9 @@ describe('TMWeasyQRPaymentWebhook - Automatic Cancellation Scheduler', () => {
 
   beforeEach(() => {
     vi.stubGlobal('fetch', vi.fn());
-    vi.useFakeTimers();
+    vi.useFakeTimers({
+      toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date']
+    });
   });
 
   afterEach(() => {

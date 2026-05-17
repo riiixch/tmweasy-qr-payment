@@ -1,6 +1,7 @@
 # 🇹🇭 @riiixch/tmweasy-qr-payment 💸
 
 [![npm version](https://img.shields.io/npm/v/%40riiixch%2Ftmweasy-qr-payment.svg)](https://www.npmjs.com/package/@riiixch/tmweasy-qr-payment)
+[![Build Status](https://github.com/riiixch/tmweasy-qr-payment/actions/workflows/ci.yml/badge.svg)](https://github.com/riiixch/tmweasy-qr-payment/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-ISC-green.svg)](LICENSE)
 [![Type Safety](https://img.shields.io/badge/TypeScript-100%25-blue.svg)](https://www.typescriptlang.org)
 [![Zero Dependencies](https://img.shields.io/badge/dependencies-zero-brightgreen.svg)](#)

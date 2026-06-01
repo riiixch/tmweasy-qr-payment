@@ -357,11 +357,6 @@ export class TMWeasyQRPayment {
       throw new TMWeasyValidationError('Customer IP address is required to confirm payment', 'ip');
     }
 
-    const conAccode = options.accode?.trim() || this.accode;
-    if (!conAccode) {
-      throw new TMWeasyValidationError('accode (bank access code) is required to confirm payment, either globally or in options', 'accode');
-    }
-
     const conAccountNo = options.accountNo?.trim() || this.accountNo;
     if (!conAccountNo) {
       throw new TMWeasyValidationError('accountNo (merchant bank account number) is required to confirm payment, either globally or in options', 'accountNo');
@@ -372,6 +367,18 @@ export class TMWeasyQRPayment {
       throw new TMWeasyValidationError('accountNo must be a numeric string of exactly 10 digits', 'accountNo');
     }
 
+    const params: Record<string, string> = {
+      id_pay: String(options.idPay).trim(),
+      account_no: conAccountNo,
+      ip: options.ip.trim(),
+      method: 'confirm'
+    };
+
+    const conAccode = options.accode?.trim() || this.accode;
+    if (conAccode) {
+      params.accode = conAccode;
+    }
+
     interface RawConfirmPayResponse {
       status: number | string;
       ref1?: string;
@@ -380,13 +387,7 @@ export class TMWeasyQRPayment {
       date_pay?: string;
     }
 
-    const rawResponse = await this.request<RawConfirmPayResponse>({
-      id_pay: String(options.idPay).trim(),
-      accode: conAccode,
-      account_no: conAccountNo,
-      ip: options.ip.trim(),
-      method: 'confirm'
-    });
+    const rawResponse = await this.request<RawConfirmPayResponse>(params);
 
     const statusValue = Number(rawResponse.status) === 1 ? 1 : 0;
 

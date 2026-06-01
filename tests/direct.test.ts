@@ -219,13 +219,22 @@ describe('TMWeasyQRPayment (Direct Bank API)', () => {
       })).rejects.toThrow('accountNo must be a numeric string of exactly 10 digits');
     });
 
-    it('should throw validation error if conId/accode is not provided globally or in options', async () => {
+    it('should successfully confirm payment without accode and not include accode in query parameters', async () => {
+      vi.mocked(fetch).mockResolvedValue({
+        ok: true,
+        text: async () => JSON.stringify({ status: 1 }),
+      } as Response);
+
       const clientWithoutAccode = new TMWeasyQRPayment({
         username: 'user',
         password: 'pwd',
-        conId: 'con'
+        conId: 'con',
+        accountNo: '0123456789'
       });
-      await expect(clientWithoutAccode.confirmPay(confirmOptions)).rejects.toThrow('accode');
+      await clientWithoutAccode.confirmPay(confirmOptions);
+
+      const requestedUrl = vi.mocked(fetch).mock.calls[0][0] as string;
+      expect(requestedUrl).not.toContain('accode=');
     });
   });
 
